@@ -1,0 +1,13 @@
+# OuroMetrics exporter configuration.
+#
+# bind: interface the /metrics endpoint listens on. 0.0.0.0 exposes it to the network; restrict
+# access at the firewall to the Prometheus host only. Use 127.0.0.1 if Prometheus runs on this box.
+bind: "0.0.0.0"
+port: 9940
+
+# Export JVM metrics (heap, GC, threads) under the standard jvm_* names.
+jvm-metrics: true
+
+# Export ouro_server_* gauges (players online, plugins loaded), refreshed every 5 seconds on the
+# async scheduler.
+server-metrics: true

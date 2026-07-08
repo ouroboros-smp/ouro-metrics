@@ -1,0 +1,7 @@
+name: OuroMetrics
+version: '${version}'
+main: com.ouroboros.metrics.folia.OuroMetricsPlugin
+api-version: '1.21'
+folia-supported: true
+authors: [Ronald Johnson]
+description: Shared Prometheus exporter for Ouroboros SMP plugins. Registers MetricsRegistry in the ServicesManager and serves /metrics.

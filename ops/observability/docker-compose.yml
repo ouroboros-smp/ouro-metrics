@@ -1,0 +1,39 @@
+# Prometheus + Grafana for Ouroboros SMP plugin metrics.
+# Run on the box that can reach the world server's :9940 and mehen-bot's :9941
+# (Velocity/MariaDB OVH box on the same LAN, or the Framework Desktop over Tailscale).
+# Set real targets in prometheus/prometheus.yml before first start.
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: ouro-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=90d
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    container_name: ouro-grafana
+    restart: unless-stopped
+    environment:
+      # Change on first login; this never leaves the box.
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=change-me
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus-data:
+  grafana-data:

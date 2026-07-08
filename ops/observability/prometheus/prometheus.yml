@@ -1,0 +1,23 @@
+# Scrape config for Ouroboros SMP.
+# Replace the placeholder hosts with real addresses before starting the stack:
+#   WORLD_BOX  = the OVH world server (OuroMetrics exporter, port 9940)
+#   BOT_HOST   = wherever mehen-bot runs (prom-client endpoint, port 9941)
+# Open question OQ1 in ADR-001: this stack runs either on the Velocity/MariaDB box (LAN targets)
+# or the Framework Desktop (Tailscale addresses). Firewall 9940/9941 to this host only.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: minecraft
+    static_configs:
+      - targets: ["WORLD_BOX:9940"]
+        labels:
+          server: world
+
+  - job_name: mehen-bot
+    static_configs:
+      - targets: ["BOT_HOST:9941"]
+        labels:
+          service: mehen-bot
