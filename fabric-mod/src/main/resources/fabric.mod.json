@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "ouro_metrics",
+  "version": "${version}",
+  "name": "OuroMetrics",
+  "description": "Shared Prometheus exporter for Ouroboros SMP Fabric mods.",
+  "authors": [
+    "Ronald Johnson"
+  ],
+  "environment": "server",
+  "entrypoints": {
+    "server": [
+      "com.ouroboros.metrics.fabric.OuroMetricsMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "fabric-api": "*",
+    "minecraft": "~1.21.11",
+    "java": ">=21"
+  }
+}

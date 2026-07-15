@@ -1,30 +1,83 @@
 # ouro-metrics
 
-Shared operational metrics for Ouroboros SMP plugins. One Prometheus registry and one `/metrics`
-endpoint per server process; every plugin registers its own instruments through a zero-dependency
-port.
+Shared operational metrics for Ouroboros SMP plugins and mods. One Prometheus registry and one
+`/metrics` endpoint run per server process; every consumer registers instruments through a
+zero-dependency port.
 
 ## Modules
 
 | Module | What it is | Who depends on it |
 |---|---|---|
-| `metrics-core` | The port: `MetricsRegistry`, `PluginMetrics`, `Counter`, `Gauge`, `Timer`. Zero dependencies. | Every instrumented plugin (`compileOnly`) |
-| `metrics-prometheus` | Prometheus adapter behind the port | `folia-plugin` only |
-| `folia-plugin` | The `OuroMetrics` server plugin: owns the registry, serves `/metrics`, registers the service | Nobody at compile time; everybody at runtime |
+| `metrics-core` | The port: `MetricsRegistry`, `PluginMetrics`, `Counter`, `Gauge`, `Timer`. Zero dependencies. | Every instrumented consumer at compile time |
+| `metrics-prometheus` | Prometheus adapter behind the port | Exporter modules only |
+| `fabric-mod` | Fabric server exporter: owns the registry, serves `/metrics`, and publishes `OuroMetricsApi` | Fabric consumers at compile time; the server at runtime |
+| `folia-plugin` | Folia exporter: owns the registry, serves `/metrics`, and registers a Bukkit service | Folia consumers at runtime |
 
-The Minestom port gets its own adapter later. Consumer code never changes.
+The Fabric and Folia exporters coexist during the server cutover and reuse the same core and
+Prometheus adapter. A future platform adapter can implement the same port without changing
+instrumentation code.
 
 ## Build and publish
 
-```
-./gradlew build                 # compiles everything, runs tests, produces OuroMetrics-<v>.jar
-./gradlew publishToMavenLocal   # required once so consumer repos can resolve metrics-core
+```text
+./gradlew build                 # compiles all modules, runs tests, and builds both exporter jars
+./gradlew publishToMavenLocal   # exposes compile-only APIs to consumer repositories
 ```
 
-Consumers resolve `com.ouroboros:metrics-core:0.1.0` from `mavenLocal()`. Move to GitHub Packages
-when CI needs it.
+The deployable jars are produced separately at
+`fabric-mod/build/libs/OuroMetrics-<v>.jar` and
+`folia-plugin/build/libs/OuroMetrics-<v>.jar`. Consumers resolve local compile-only artifacts from
+`mavenLocal()` until a shared package repository replaces it.
 
-## Wiring a plugin (private, runs only on Ouroboros)
+## Wiring a private Fabric mod
+
+Private mods hard-depend on the exporter, so Fabric guarantees presence and initialization order.
+Add the exporter to the compile-only mod classpath without transitives:
+
+```kotlin
+repositories { mavenLocal() }
+dependencies {
+    modCompileOnly("com.ouroboros:fabric-mod:0.1.0") {
+        isTransitive = false
+    }
+}
+```
+
+Declare the runtime dependency in `fabric.mod.json`:
+
+```json
+{
+  "depends": {
+    "ouro_metrics": "*"
+  }
+}
+```
+
+Resolve the plugin facade during the consumer's initializer:
+
+```java
+PluginMetrics metrics = OuroMetricsApi.registry().forPlugin("mehen");
+```
+
+`modCompileOnly` makes `OuroMetricsApi` and the metrics port visible to the compiler but does not
+put them in the consumer jar. Never shade or Jar-in-Jar `fabric-mod` or `metrics-core` into a
+consumer: the exporter provides the single runtime copy on Fabric's shared classloader.
+
+## Wiring a public Fabric mod
+
+Public mods must still run when OuroMetrics is absent:
+
+1. Define a small internal telemetry interface and a no-op implementation.
+2. Put all `com.ouroboros.metrics` imports in one hook class that implements that interface.
+3. Add the same non-transitive `modCompileOnly` dependency used above.
+4. Optionally add `"suggests": {"ouro_metrics": "*"}` to `fabric.mod.json`.
+5. Only load the hook class after
+   `FabricLoader.getInstance().isModLoaded("ouro_metrics")` returns true.
+
+Keeping the guard outside the hook prevents the JVM from resolving optional OuroMetrics classes
+when the exporter is not installed.
+
+## Wiring a private Folia plugin
 
 `build.gradle.kts`:
 
@@ -42,41 +95,38 @@ depend: [OuroMetrics]
 `onEnable`:
 
 ```java
-MetricsRegistry svc = getServer().getServicesManager().load(MetricsRegistry.class);
-PluginMetrics metrics = svc != null ? svc.forPlugin("mehen") : PluginMetrics.noop();
+MetricsRegistry registry = getServer().getServicesManager().load(MetricsRegistry.class);
+PluginMetrics metrics = registry != null ? registry.forPlugin("mehen") : PluginMetrics.noop();
 ```
 
-Hard `depend` is deliberate for the private plugins: it guarantees class visibility and load order,
-and the exporter is always installed on our server. Do not shade `metrics-core` into a consumer
-jar; a shaded copy has different class identity and the ServicesManager lookup returns null.
+Public Folia plugins use the same guarded-hook pattern, with `softdepend: [OuroMetrics]` and a
+Bukkit plugin-presence check before loading the hook class.
 
-## Wiring a public plugin (WildAnimalBalancer pattern)
+## Naming convention
 
-Public plugins must run on servers without OuroMetrics, so they cannot reference metrics-core
-types from classes that always load. Pattern:
+- Series use `ouro_<plugin>_<subsystem>_<unit>` in lowercase snake case. The facade adds the
+  `ouro_<plugin>_` prefix.
+- Counters end in `_total`; timers end in `_seconds` and record seconds.
+- Labels must have bounded cardinality. Never use player names, UUIDs, or free-form strings.
+- Every consumer exposes `ouro_<plugin>_errors_total{where=...}`.
 
-1. Define a tiny internal telemetry interface in the plugin with exactly the methods it needs,
-   plus a no-op implementation.
-2. Put all `com.ouroboros.metrics` imports in one hook class that implements that interface.
-3. `softdepend: [OuroMetrics]`, and only load the hook class after checking
-   `getServer().getPluginManager().getPlugin("OuroMetrics") != null`.
-
-## Naming convention (enforced by MetricNames)
-
-- Series: `ouro_<plugin>_<subsystem>_<unit>`, lowercase snake_case. The facade adds the
-  `ouro_<plugin>_` prefix; you supply the rest.
-- Counters end in `_total` (`ouro_patrol_kills_total`).
-- Timers end in `_seconds` and record seconds (`ouro_rooms_scan_duration_seconds`).
-- Labels: bounded cardinality only. Biome, reason, outcome are fine. Player names, UUIDs, and
-  free-form strings are never label values.
-- Errors: every plugin exposes `ouro_<plugin>_errors_total{where=...}`.
+`MetricNames` enforces identifier and suffix rules.
 
 ## Exporter configuration
 
-`plugins/OuroMetrics/config.yml`: `bind` (default `0.0.0.0`), `port` (default `9940`),
-`jvm-metrics`, `server-metrics`. Firewall the port so only the Prometheus host can reach it.
+Fabric reads `config/ouro-metrics.properties` and writes it with defaults on first run:
+
+| Property | Default | Purpose |
+|---|---:|---|
+| `bind` | `0.0.0.0` | Interface serving `/metrics` |
+| `port` | `9940` | Exporter port |
+| `jvm-metrics` | `true` | Export standard `jvm_*` metrics |
+| `server-metrics` | `true` | Export players-online and mods-loaded gauges every 100 ticks |
+
+Folia continues to read `plugins/OuroMetrics/config.yml` with the equivalent settings. Firewall
+the exporter port so only the Prometheus host can reach it.
 
 ## Deployment
 
-The Prometheus + Grafana stack lives in `ops/observability/`. See the README there for scrape
-targets and dashboard provisioning.
+The Prometheus and Grafana stack lives in `ops/observability/`. Its scrape target remains port
+9940 across the platform cutover.

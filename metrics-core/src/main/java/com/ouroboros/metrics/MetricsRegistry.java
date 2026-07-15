@@ -3,17 +3,17 @@ package com.ouroboros.metrics;
 /**
  * Entry-point service for the Ouroboros metrics pipeline.
  *
- * <p>The OuroMetrics exporter plugin registers an implementation of this interface in the Bukkit
- * ServicesManager. Consumer plugins load it once in {@code onEnable} and hold the resulting
- * {@link PluginMetrics}:
+ * <p>Each platform's OuroMetrics exporter publishes one implementation of this interface through
+ * its platform-specific discovery mechanism. Consumers resolve it once during initialization and
+ * hold the resulting {@link PluginMetrics}:
  *
  * <pre>{@code
- * MetricsRegistry svc = getServer().getServicesManager().load(MetricsRegistry.class);
- * PluginMetrics metrics = svc != null ? svc.forPlugin("mehen") : PluginMetrics.noop();
+ * MetricsRegistry registry = platformMetricsRegistry();
+ * PluginMetrics metrics = registry.forPlugin("mehen");
  * }</pre>
  *
- * <p>On Minestom the same interface is implemented by a Minestom adapter; consumer code does not
- * change.
+ * <p>Only discovery is platform-specific; instrumentation against this interface and
+ * {@link PluginMetrics} remains portable.
  */
 public interface MetricsRegistry {
 

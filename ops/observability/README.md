@@ -17,14 +17,14 @@ every instrumented plugin plus mehen-bot.
 
 | Job | Target | Source |
 |---|---|---|
-| minecraft | WORLD_BOX:9940 | OuroMetrics plugin (all ouro_* plugin series, ouro_server_*, jvm_*) |
+| minecraft | WORLD_BOX:9940 | OuroMetrics exporter (all ouro_* consumer series, ouro_server_*, jvm_*) |
 | mehen-bot | BOT_HOST:9941 | prom-client in mehen-bot (ouro_mehenbot_*, node defaults) |
 
 ## Series inventory (as instrumented)
 
 | Plugin | Series | Labels |
 |---|---|---|
-| server | ouro_server_players_online, ouro_server_plugins_loaded | |
+| server | ouro_server_players_online, ouro_server_mods_loaded | |
 | mehen | ouro_mehen_kicks_total | reason |
 | | ouro_mehen_bans_total, ouro_mehen_pardons_total | |
 | | ouro_mehen_errors_total | where |
