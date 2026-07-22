@@ -1130,7 +1130,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "increase(ouro_coffer_containers_bound_total[1h])",
+          "expr": "increase(coffer_containers_bound_total[1h])",
           "legendFormat": "bound",
           "refId": "A"
         },
@@ -1139,7 +1139,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "increase(ouro_coffer_access_denied_total[1h])",
+          "expr": "increase(coffer_access_denied_total[1h])",
           "legendFormat": "denied",
           "refId": "B"
         }
