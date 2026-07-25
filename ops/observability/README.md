@@ -40,7 +40,7 @@ every instrumented plugin plus mehen-bot.
 | wab | ouro_wab_spawns_total | species |
 | | ouro_wab_balance_pass_seconds (histogram) | |
 | | ouro_wab_errors_total | where |
-| coffer | ouro_coffer_containers_bound_total, ouro_coffer_access_denied_total | |
+| coffer | coffer_containers_bound_total, coffer_access_denied_total | |
 | emojibridge | ouro_emojibridge_pack_pushes_total | |
 | | ouro_emojibridge_pack_status_total | status |
 | | ouro_emojibridge_errors_total | where |
