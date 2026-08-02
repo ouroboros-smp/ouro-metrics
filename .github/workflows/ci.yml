@@ -34,6 +34,8 @@ jobs:
           path: |
             fabric-mod/build/libs/OuroMetrics-*.jar
             folia-plugin/build/libs/OuroMetrics-*.jar
+            !fabric-mod/build/libs/*-dev-shadow.jar
+            !fabric-mod/build/libs/*-sources.jar
           if-no-files-found: error
           retention-days: 14
       - name: Upload test reports
