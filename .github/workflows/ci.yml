@@ -24,7 +24,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-          cache: gradle
       - run: chmod +x gradlew
       - name: Build all modules and run tests
         run: ./gradlew clean build --no-daemon --stacktrace --console=plain
