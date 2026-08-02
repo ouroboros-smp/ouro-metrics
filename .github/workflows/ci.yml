@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: [self-hosted, crucible-pc]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+      - run: chmod +x gradlew
+      - name: Build all modules and run tests
+        run: ./gradlew clean build --no-daemon --stacktrace --console=plain
+      - name: Upload deployable jars
+        uses: actions/upload-artifact@v4
+        with:
+          name: ouro-metrics-release-candidate-jars
+          path: |
+            fabric-mod/build/libs/OuroMetrics-*.jar
+            folia-plugin/build/libs/OuroMetrics-*.jar
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/**'
+          if-no-files-found: ignore
+          retention-days: 14
