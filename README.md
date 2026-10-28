@@ -130,3 +130,7 @@ the exporter port so only the Prometheus host can reach it.
 
 The Prometheus and Grafana stack lives in `ops/observability/`. Its scrape target remains port
 9940 across the platform cutover.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
